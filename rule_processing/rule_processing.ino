@@ -89,7 +89,7 @@ dbg=true;
     Serial1.begin(14400);
     Serial2.begin(14400);
     Serial3.begin(14400);
-    Serial.print("Initializing SD card...");
+    SendDebug("Initializing SD card...");
       pinMode(10, OUTPUT);
  digitalWrite(10, HIGH);
    pinMode(4, OUTPUT);
@@ -210,7 +210,7 @@ void PrintLineToFile(String Aval) {
      RuleFile.println(Aval);
     RuleFile.close();
   } else {
-    Serial.println(F("error opening file"));
+    SendDebug("error opening file");
   }  
   
 }
@@ -218,15 +218,15 @@ void PrintLineToFile(String Aval) {
 void EmtyFile() {
  SD.remove("rulefile");
     dbg=true;
- Serial.println(F("RuleFile Deleted"));
+ SendDebug("RuleFile Deleted");
     dbg=false; 
 }
 
 void SendDebug(String Aval) {
  if (dbg == true) {
-  Serial.print(Aval);
+  Serial.print("!"+Aval+"#");
  //Serial.print("\n");
-  delay(10);
+  //delay(10);
  }
 
  
@@ -262,7 +262,7 @@ void Processinpstring(int Inpbus, String inpstring) {
      occupied=false;
      break;    
      case 7:   
-    setTime(inpstring);
+   // setTime(inpstring);
      occupied=false;
      break;     
    case 20:   
@@ -291,10 +291,11 @@ void printButtons() {
 void toggledebug() { 
  if (dbg == false) {
    dbg=true;
-   Serial.println(F("Debugging On"));
+   SendDebug("Debugging On");
  }
  else 
  {
+    Serial.print("!Debugging Off#");
   dbg=false; 
  }
   
@@ -303,7 +304,7 @@ void toggledebug() {
 void pfile() {
 dbg=true;
   String aString="";
-  Serial.println(F("RuleFile Content:"));
+ SendDebug("RuleFile Content:");
 RuleFile = SD.open("rulefile");
        while (RuleFile.available()) {        
         aString = RuleFile.readStringUntil('\n');
