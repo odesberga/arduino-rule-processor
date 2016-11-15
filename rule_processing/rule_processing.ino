@@ -19,7 +19,7 @@ boolean dbg = true;
 boolean occupied = false;
 
 // Buttons variabler
-int pc=58;
+int pc=51;
 //port,currentstate,prevstate,prev now()
 int ports[58][4] = {
   {9, 0, 0, 0} ,
@@ -29,7 +29,7 @@ int ports[58][4] = {
   {5, 0, 0, 0} ,
   {4, 0, 0, 0} ,
   {3, 0, 0, 0} ,
-  {1, 0, 0, 0} ,
+ // {1, 0, 0, 0} ,
   {0, 0, 0, 0} ,
   {22, 0, 0, 0} ,
   {23, 0, 0, 0} ,
@@ -114,6 +114,7 @@ dbg=true;
 
 }
 printButtons();
+dbg = false;
 }
 
 
@@ -192,6 +193,7 @@ for(int i = 0;i<pc;i++){
            ports[i][2]=1;  
            ports[i][3]=now();  
            Processinpstring(0,"20,"+String(i+1)+",1,0");
+           SendDebug("mapbutton:0:0:"+String(i+1));
     }
 
       
@@ -270,8 +272,10 @@ void Processinpstring(int Inpbus, String inpstring) {
      parseandsendcodefrmfile(Inpbus,GetValFromString(inpstring,2),GetValFromString(inpstring,3),GetValFromString(inpstring,4));
      occupied=false;
      break;
-     case 99:   
-     SendDebug(inpstring);
+     case 99: 
+     dbg=true;  
+     SendDebug(inpstring.substring(3,inpstring.length()));
+     dbg=false;
      occupied=false;
      break;
 
@@ -364,7 +368,7 @@ void parseandsendcodefrmfile(int inpbus, int inpport, int inpstate, int longpres
             int fistate = GetValFromString(l_line,4);        
       if (fistate == inpstate) {
          int flpress = GetValFromString(l_line,13);  
-        if ((longpress >= flpress) && (longpress < flpress+2)) {
+        if ((longpress >= flpress-1) && (longpress < flpress+2) || (flpress==99)) {
        sendcode(GetValFromString(l_line,5),GetValFromString(l_line,6),GetValFromString(l_line,7),GetValFromString(l_line,8));
    
       }
