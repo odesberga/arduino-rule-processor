@@ -17,7 +17,7 @@ byte StartChar;
 const int cs = 4; 
 boolean dbg = true;
 boolean occupied = false;
-
+boolean timechecked= false;
 // Buttons variabler
 int pc=51;
 //port,currentstate,prevstate,prev now()
@@ -166,6 +166,44 @@ void loop() {
 
 
 readButtons();
+
+time_t t = now();
+if ((second(t) ==0) && (timechecked==false)) {
+  timechecked=true;
+  checktimers(t);
+
+}
+
+if (second(t) ==1) {timechecked=false;}
+
+
+}
+
+
+void checktimers(time_t t){
+int currentminute=minute(t);
+int currenthour=hour(t);
+  RuleFile = SD.open("rulefile");    
+ String l_line = "";
+      while (RuleFile.available()) {
+        
+        l_line = RuleFile.readStringUntil('\n');            
+        int finpbus = GetValFromString(l_line,1);       
+  if (finpbus == 99) {    
+           int fiportnum = GetValFromString(l_line,3);
+           
+
+    if (fiportnum == 99) {
+      if ((GetValFromString(l_line,9)==currenthour ) && (GetValFromString(l_line,10)==currentminute)){
+      sendcode(GetValFromString(l_line,5),GetValFromString(l_line,6),GetValFromString(l_line,7),GetValFromString(l_line,8));
+      }
+     }
+  }
+ 
+}
+ RuleFile.close();       
+
+
 
 }
 
