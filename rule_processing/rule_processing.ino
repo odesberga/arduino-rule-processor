@@ -90,13 +90,16 @@ dbg=true;
     Serial2.begin(14400);
     Serial3.begin(14400);
     SendDebug("Initializing SD card...");
-      pinMode(10, OUTPUT);
- digitalWrite(10, HIGH);
-   pinMode(4, OUTPUT);
-  digitalWrite(4, LOW);
- if (!SD.begin(4)) {
-    SendDebug("initialization failed!");
-    return;
+      pinMode(53, OUTPUT);
+
+//   pinMode(53, OUTPUT);
+ 
+while (!SD.begin(53)) {
+  //  SendDebug("initialization failed");
+  //  return;
+  digitalWrite(53, HIGH);
+  delay(50);
+  digitalWrite(53, LOW);
   }
   SendDebug("initialization done.");
     setSyncProvider(RTC.get);   // the function to get the time from the RTC
@@ -188,13 +191,13 @@ int currenthour=hour(t);
       while (RuleFile.available()) {
         
         l_line = RuleFile.readStringUntil('\n');            
-        int finpbus = GetValFromString(l_line,1);       
-  if (finpbus == 99) {    
-           int fiportnum = GetValFromString(l_line,3);
+        String finpbus = GetValFromString(l_line,1);       
+  if (finpbus == "99") {    
+           String fiportnum = GetValFromString(l_line,3);
            
 
-    if (fiportnum == 99) {
-      if ((GetValFromString(l_line,9)==currenthour ) && (GetValFromString(l_line,10)==currentminute)){
+    if (fiportnum == "99") {
+      if ((GetValFromString(l_line,9)==String(currenthour) ) && (GetValFromString(l_line,10)==String(currentminute))){
       sendcode(GetValFromString(l_line,5),GetValFromString(l_line,6),GetValFromString(l_line,7),GetValFromString(l_line,8));
       }
      }
@@ -224,13 +227,13 @@ for(int i = 0;i<pc;i++){
        ports[i][2]=0;
        int secs = now() - ports[i][3];        
        ports[i][3]=0;
-       Processinpstring(0,"20,"+String(i+1)+",0,"+String(secs));
+       Processinpstring(0,"20,"+String(i+1)+",0,"+String(secs)+"rulefile");
        
       }
       if(ports[i][1]==1){      
            ports[i][2]=1;  
            ports[i][3]=now();  
-           Processinpstring(0,"20,"+String(i+1)+",1,0");
+           Processinpstring(0,"20,"+String(i+1)+",1,0"+"rulefile");
            SendDebug("mapbutton:0:0:"+String(i+1));
     }
 
@@ -244,8 +247,10 @@ btnDelay=millis();
 }
 
 
-void PrintLineToFile(String Aval) {
-    RuleFile = SD.open("rulefile", FILE_WRITE);
+void PrintLineToFile(String Aval,String filename) {
+  SendDebug(Aval);
+    RuleFile = SD.open(filename.c_str(), FILE_WRITE);
+    
   if (RuleFile) {
      RuleFile.println(Aval);
     RuleFile.close();
@@ -255,10 +260,10 @@ void PrintLineToFile(String Aval) {
   
 }
 
-void EmtyFile() {
- SD.remove("rulefile");
+void EmtyFile(String filename) {
+ //SD.remove(filename.c_str());
     dbg=true;
- SendDebug("RuleFile Deleted");
+ SendDebug(filename+" Deleted");
     dbg=false; 
 }
 
@@ -276,21 +281,23 @@ void SendDebug(String Aval) {
 void Processinpstring(int Inpbus, String inpstring) {
   occupied=true;
   SendDebug("InpStr Bus:"+String(Inpbus)+" String: "+inpstring);
- switch (GetValFromString(inpstring,1)) {
+  String a=GetValFromString1(inpstring,1);
+  
+ switch (a.toInt()) {
    case 1:
-      sendcode(GetValFromString(inpstring,2),GetValFromString(inpstring,3),GetValFromString(inpstring,4),GetValFromString(inpstring,5));
+      sendcode(GetValFromString1(inpstring,2),GetValFromString1(inpstring,3),GetValFromString1(inpstring,4),GetValFromString1(inpstring,5));
       occupied=false;
       break;
    case 2:   
-     EmtyFile();
+     EmtyFile(GetValFromString1(inpstring,2));
      occupied=false;
      break;
-   case 3:   
-     PrintLineToFile(inpstring.substring(2,inpstring.length()));
+   case 3:    
+     PrintLineToFile(GetValFromString1(inpstring,2),GetValFromString1(inpstring,3));
      occupied=false;
      break; 
    case 4:   
-     pfile();
+     pfile(GetValFromString1(inpstring,2));
      occupied=false;
      break; 
      case 5:   
@@ -307,7 +314,8 @@ void Processinpstring(int Inpbus, String inpstring) {
      break;     
    case 20:   
    //  parseandsendcode(Inpbus,GetValFromString(inpstring,2),GetValFromString(inpstring,3),GetValFromString(inpstring,4));
-     parseandsendcodefrmfile(Inpbus,GetValFromString(inpstring,2),GetValFromString(inpstring,3),GetValFromString(inpstring,4));
+ 
+     parseandsendcodefrmfile(Inpbus,GetValFromString1(inpstring,2),GetValFromString1(inpstring,3),GetValFromString1(inpstring,4),GetValFromString1(inpstring,5));
      occupied=false;
      break;
      case 99: 
@@ -343,11 +351,11 @@ void toggledebug() {
   
 }
 
-void pfile() {
+void pfile(String filename) {
 dbg=true;
   String aString="";
- SendDebug("RuleFile Content:");
-RuleFile = SD.open("rulefile");
+ SendDebug("RuleFile Content: filename: "+filename);
+RuleFile = SD.open(filename.c_str());
        while (RuleFile.available()) {        
         aString = RuleFile.readStringUntil('\n');
          SendDebug(aString);        
@@ -360,10 +368,40 @@ RuleFile.close();
 
 
 
-int GetValFromString(String string,int num)
+String GetValFromString(String string,int num)
 {
   String res;
-  int Result;
+  String Result;
+  int i = 1;
+  int commaindex[12];  
+  commaindex[0] = string.indexOf(';');
+   if (num == i) {
+    res = string.substring(0,commaindex[0]);
+   }
+    else
+ {   
+    for (i = 2; i < 13; i++) {
+        commaindex[i-1] = string.indexOf(';',commaindex[i-2]+1); 
+        if (num == i) {
+        res = string.substring(commaindex[i-2]+1,commaindex[i-1]);
+        break;
+         }
+       if (i == 12 and num == 13) {
+       res = string.substring(commaindex[i-1]+1 ,string.length());
+ 
+       }        
+       }
+ }
+ Result=res;
+
+ return Result; 
+}
+
+
+String GetValFromString1(String string,int num)
+{
+  String res;
+  String Result;
   int i = 1;
   int commaindex[12];  
   commaindex[0] = string.indexOf(',');
@@ -384,29 +422,34 @@ int GetValFromString(String string,int num)
        }        
        }
  }
- Result=res.toInt();
+ Result=res;
 
  return Result; 
 }
 
-void parseandsendcodefrmfile(int inpbus, int inpport, int inpstate, int longpress) 
+
+void parseandsendcodefrmfile(int inpbus, String inpport, String inpstate, String longpress,String filename) 
 {
    SendDebug("parseandsendcode " + String(inpbus)+","+String(inpport)+","+String(inpstate)+","+String(longpress));
 
-    RuleFile = SD.open("rulefile");    
+    RuleFile = SD.open(filename.c_str());    
  String l_line = "";
       while (RuleFile.available()) {
         
         l_line = RuleFile.readStringUntil('\n');            
-        int finpbus = GetValFromString(l_line,1);       
-  if (finpbus == inpbus) {    
-           int fiportnum = GetValFromString(l_line,3);
+        String finpbus = GetValFromString(l_line,1);       
+  if (finpbus == String(inpbus)) {    
+           String fiportnum = GetValFromString(l_line,3);
 
-    if (fiportnum == inpport) {  
-            int fistate = GetValFromString(l_line,4);        
+    if (fiportnum == inpport) { 
+     
+ 
+            String fistate =GetValFromString(l_line,4);
       if (fistate == inpstate) {
-         int flpress = GetValFromString(l_line,13);  
-        if ((longpress >= flpress-1) && (longpress < flpress+2) || (flpress==99)) {
+         String flpress = GetValFromString(l_line,13); 
+         int lp=longpress.toInt();
+         int flp=flpress.toInt();
+        if ((lp >= flp-1) && (lp < flp+2) || (flpress=="99")) {
        sendcode(GetValFromString(l_line,5),GetValFromString(l_line,6),GetValFromString(l_line,7),GetValFromString(l_line,8));
    
       }
@@ -420,11 +463,11 @@ void parseandsendcodefrmfile(int inpbus, int inpport, int inpstate, int longpres
 
 
 
-void sendcode(int obus,int omod,int oport,int ostate) {
+void sendcode(String obus,String omod,String oport,String ostate) {
  SendDebug("Sending: " +String(omod)+","+String(0)+","+String(oport)+","+String(ostate));
   
   
-  if (obus == 1) {
+  if (obus == "1") {
   Serial1.print(omod);
   Serial1.print(",");
   Serial1.print("0");
