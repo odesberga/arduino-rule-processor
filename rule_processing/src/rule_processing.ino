@@ -23,7 +23,7 @@ boolean timechecked= false;
 // Buttons variabler
 int pc=51;
 char serbuf[250];
-
+//char rulebuf[62];
 struct msg
 {
   char inbus[3];
@@ -35,6 +35,7 @@ struct msg
   char port[3];
   char filename[11];
   char data[200];
+  char longpress[3];
 };
 typedef struct msg Msg;
 struct rl
@@ -59,7 +60,7 @@ char intbus[3];
 Msg emptymsg;
 Msg imessage;
 Msg omessage;
-Rule rule;
+//Rule rule;
 Rule emptyrule;
 
 //port,currentstate,prevstate,prev now()
@@ -127,7 +128,6 @@ int ports[51][4] = {
 
 void setup() {
 dbg=true;
-
   Serial.begin(57600);
     Serial1.begin(14400);
     Serial2.begin(14400);
@@ -195,17 +195,9 @@ void loop() {
       inst= Serial.readStringUntil('#');
       inst.toCharArray(serbuf, 250);
       strcat(serbuf, '\0');
-      imessage.inbus[0]='0';
-      imessage.inbus[1]='0';
-      imessage.inbus[2]='\0';
-      imessage.tomodule[0]=serbuf[0];
-      imessage.tomodule[1]=serbuf[1];
-      imessage.tomodule[2]='\0';
-      imessage.modulecount[0]=serbuf[2];
-      imessage.modulecount[1]=serbuf[3];
-      imessage.modulecount[2]='\0';
+      populateiMsg(0);
       if (isthisforme()){
-        populateiMsg();
+
         processMsg();
       };
      prntrule();
@@ -215,7 +207,12 @@ void loop() {
     }
 }
 
+readButtons();
+
 }
+
+
+
 bool isthisforme(){
 int tm = atoi(imessage.tomodule);
 int mc = atoi(imessage.modulecount);
@@ -250,14 +247,14 @@ void processMsg(){
       DeleteFile();
       break;
     case 3:
+    SendFiles();
+      break;
+    case 4:
+      pfile();
+      break;
+    case 6:
       PrintLineToFile();
       break;
-      case 4:
-        pfile();
-        break;
-      case 6:
-        ListFiles();
-        break;
 
   }
   memset(serbuf,0, sizeof(serbuf));
@@ -315,6 +312,7 @@ void sendData(){
   }
   omessage=emptymsg;
 }
+
 bool initSD(){
   pinMode(53, OUTPUT);
   digitalWrite(53, LOW);
@@ -324,6 +322,8 @@ bool initSD(){
   }
   return true;
 }
+
+
 void ListFiles(){
   initSD();
   File root = SD.open("/");
@@ -333,20 +333,17 @@ String filenames="";
 //RuleFile = SD.open("/");
 
   while(true) {
-
     File entry =  root.openNextFile();
     if (! entry) {
       // no more files
       //Serial.println("**nomorefiles**");
-      SendDebug("SD error");
       break;
-
     }
-    filenames = filenames + entry.name()+";";
+    filenames = filenames + entry.name()+" ";
 
   }
   root.close();
-  SendDebug("6,"+filenames);
+  SendDebug(filenames);
 }
 
 
@@ -356,13 +353,41 @@ void SendDebug(String Aval) {
  // Serial.print("\n");
  //  //delay(10);
  // }
-genOmessageAndSendData(Aval,"00","00");
+genOmessageAndSendData("01,"+Aval,"00","00");
 
 
 
 }
 
-void populateiMsg() {
+void populateiMsg(int inpBus) {
+  imessage=emptymsg;
+  if (inpBus == 0){
+  imessage.inbus[0]='0';
+  imessage.inbus[1]='0';
+  imessage.inbus[2]='\0';
+}
+if (inpBus == 1){
+imessage.inbus[0]='0';
+imessage.inbus[1]='1';
+imessage.inbus[2]='\0';
+}
+if (inpBus == 2){
+imessage.inbus[0]='0';
+imessage.inbus[1]='2';
+imessage.inbus[2]='\0';
+}
+if (inpBus == 3){
+imessage.inbus[0]='0';
+imessage.inbus[1]='3';
+imessage.inbus[2]='\0';
+}
+
+  imessage.tomodule[0]=serbuf[0];
+  imessage.tomodule[1]=serbuf[1];
+  imessage.tomodule[2]='\0';
+  imessage.modulecount[0]=serbuf[2];
+  imessage.modulecount[1]=serbuf[3];
+  imessage.modulecount[2]='\0';
   imessage.msgtype[0] = serbuf[5];
   imessage.msgtype[1] = serbuf[6];
   imessage.msgtype[3] = '\0';
@@ -380,45 +405,6 @@ void populateiMsg() {
       }
   }
 }
-
-void genOmessageAndSendData(String data,String obus,String omod){
-omessage=emptymsg;
-data.toCharArray(omessage.data, 200);
-  if (obus.length() == 1) {
-    omessage.tobus[0] = "0";
-    omessage.tobus[1] = obus[0];
-  } else {
-    omessage.tobus[0] = obus[0];
-    omessage.tobus[1] = obus[1];
-  }
-  if (omod.length() == 1) {
-    omessage.tomodule[0] = "0";
-    omessage.tomodule[1] = omod[0];
-  } else {
-    omessage.tomodule[0] = omod[0];
-    omessage.tomodule[1] = omod[1];
-  }
-sendData();
-omessage=emptymsg;
-}
-
-
-void pfile() {
-
-
-File RuleFile;
-RuleFile = SD.open(imessage.filename);
-       while (RuleFile.available()) {
-      String aString = RuleFile.readStringUntil('\n');
-         genOmessageAndSendData("04,"+String(imessage.filename)+","+aString,"00","01");
-
-       }
-
-RuleFile.close();
-
-}
-
-
 
 void genMsg(int index,int index2,int commacount){
   int pt = atoi(imessage.msgtype);
@@ -446,20 +432,20 @@ void genMsg(int index,int index2,int commacount){
 
     break;
 
-    case 3:
+        case 4:
+          switch (commacount) {
+            case 0:
+              imessage.filename[index2]= serbuf[index];
+              break;
+            }
+    break;
+    case 6:
           switch (commacount) {
             case 0:
               imessage.filename[index2]= serbuf[index];
               break;
             case 1:
               imessage.data[index2]= serbuf[index];
-              break;
-            }
-    break;
-    case 4:
-          switch (commacount) {
-            case 0:
-              imessage.filename[index2]= serbuf[index];
               break;
             }
     break;
@@ -472,12 +458,150 @@ void genMsg(int index,int index2,int commacount){
               case 1:
                 imessage.data[index2]= serbuf[index];
                 break;
+              case 2:
+                  imessage.longpress[index2]= serbuf[index];
+                  break;
               }
-
-    break;
-
-
+  break;
     }
+}
+
+Rule populateRule(String rulestring){
+  char rulebuf[62];
+  int commacount=0;
+  int idx=0;
+  rulestring.toCharArray(rulebuf, 62);
+  strcat(rulebuf, '\0');
+Rule rule=emptyrule;
+  for (int i =0; i< sizeof(rulebuf)-1;i++){
+      if (serbuf[i]=='\0'){break;};
+      if (serbuf[i]==';'){
+        commacount++;
+        idx=0;
+      } else {
+        switch (commacount) {
+          case 0:
+            rule.inbus[idx]= serbuf[i];
+            break;
+          case 1:
+            rule.inpmodule[idx]= serbuf[i];
+            break;
+          case 2:
+            rule.inport[idx]= serbuf[i];
+            break;
+            case 3:
+              rule.inpstate[idx]= serbuf[i];
+              break;
+              case 4:
+                rule.outpbus[idx]= serbuf[i];
+                break;
+
+              case 5:
+                rule.outpmmodule[idx]= serbuf[i];
+                break;
+
+              case 6:
+                rule.outpport[idx]= serbuf[i];
+                break;
+
+              case 7:
+                rule.outpstate[idx]= serbuf[i];
+                break;
+
+              case 8:
+                rule.hrstart[idx]= serbuf[i];
+                break;
+
+              case 9:
+                rule.minstart[idx]= serbuf[i];
+                break;
+
+              case 10:
+                rule.hrend[idx]= serbuf[i];
+                break;
+
+              case 11:
+                rule.minend[idx]= serbuf[i];
+                break;
+
+              case 12:
+                rule.lpressec[idx]= serbuf[i];
+                break;
+        }
+
+
+
+        idx++;
+      }
+  }
+return rule;
+
+}
+
+
+
+
+void genOmessageAndSendData(String data,String obus,String omod){
+omessage=emptymsg;
+data.toCharArray(omessage.data, 200);
+  if (obus.length() == 1) {
+    omessage.tobus[0] = "0";
+    omessage.tobus[1] = obus[0];
+  } else {
+    omessage.tobus[0] = obus[0];
+    omessage.tobus[1] = obus[1];
+  }
+  if (omod.length() == 1) {
+    omessage.tomodule[0] = "0";
+    omessage.tomodule[1] = omod[0];
+  } else {
+    omessage.tomodule[0] = omod[0];
+    omessage.tomodule[1] = omod[1];
+  }
+sendData();
+omessage=emptymsg;
+}
+
+
+void pfile() {
+File RuleFile;
+RuleFile = SD.open(imessage.filename);
+       while (RuleFile.available()) {
+      String aString = RuleFile.readStringUntil('\n');
+         genOmessageAndSendData("06,"+String(imessage.filename)+","+aString,"00","01");
+       }
+ genOmessageAndSendData("06,"+String(imessage.filename)+",EOF","00","01");
+RuleFile.close();
+
+}
+
+void SendFiles() {
+  initSD();
+  File root = SD.open("/");
+root.rewindDirectory();
+String filenames="";
+//SD.close();
+//RuleFile = SD.open("/");
+
+  while(true) {
+    File entry =  root.openNextFile();
+    if (! entry) {
+      // no more files
+      //Serial.println("**nomorefiles**");
+      break;
+    }
+    entry = SD.open(entry.name());
+           while (entry.available()) {
+          String aString = entry.readStringUntil('\n');
+             genOmessageAndSendData("06,"+String(entry.name())+","+aString,"00","01");
+           }
+     genOmessageAndSendData("06,"+String(entry.name())+",EOF","00","01");
+    RuleFile.close();
+
+  }
+  root.close();
+
+
 }
 
 void PrintLineToFile() {
@@ -521,6 +645,48 @@ if (astring.length()==1)  {
 
 }
 
+
+
+}
+
+void readButtons() {
+
+ if (millis()-btnDelay >= del) {
+for(int i = 0;i<pc;i++){
+    if(digitalRead(ports[i][0]) == LOW){
+     ports[i][1]=1;
+    }
+    else
+    {
+      ports[i][1]=0;
+    }
+
+    if(ports[i][1]!=ports[i][2]){
+      String inpMsg = "";
+      if(ports[i][1]==0){
+       ports[i][2]=0;
+       int secs = now() - ports[i][3];
+       ports[i][3]=0;
+       // Processinpstring(0,"20,"+String(i+1)+",0,"+String(secs));
+       inpMsg="0000,20,"+String(i+1)+",0,"+String(secs);
+      }
+      if(ports[i][1]==1){
+           ports[i][2]=1;
+           ports[i][3]=now();
+           // Processinpstring(0,"20,"+String(i+1)+",1,0");
+           inpMsg="0000,20,"+String(i+1)+",1,0";
+           SendDebug("mapbutton;0;0;"+String(i+1));
+    }
+    memset(serbuf,0, sizeof(serbuf));
+    inpMsg.toCharArray(serbuf, 250);
+    strcat(serbuf, '\0');
+    populateiMsg(0);
+    processMsg();
+
+    }
+}
+btnDelay=millis();
+}
 
 
 }
