@@ -21,7 +21,7 @@ boolean dbg = true;
 boolean occupied = false;
 boolean timechecked= false;
 // Buttons variabler
-int pc=51;
+int pc=50;
 char serbuf[250];
 //char rulebuf[62];
 struct msg
@@ -60,11 +60,11 @@ char intbus[3];
 Msg emptymsg;
 Msg imessage;
 Msg omessage;
-//Rule rule;
+Rule rule;
 Rule emptyrule;
 
 //port,currentstate,prevstate,prev now()
-int ports[51][4] = {
+int ports[50][4] = {
   {9, 0, 0, 0} ,
   {8, 0, 0, 0} ,
   {7, 0, 0, 0} ,
@@ -178,7 +178,7 @@ dbg=true;
 printButtons();
 ListFiles();
 //printDirectory(RuleFile,0);
-dbg = true;
+dbg = false;
 }
 
 
@@ -255,61 +255,13 @@ void processMsg(){
     case 6:
       PrintLineToFile();
       break;
+    case 20:
+      ExecuteRulesFromFile();
+      break;
 
   }
   memset(serbuf,0, sizeof(serbuf));
   imessage=emptymsg;
-  omessage=emptymsg;
-}
-void sendData(){
-  int pt = atoi(omessage.tobus);
-  switch (pt) {
-    case 0:
-      Serial.print("!");
-      Serial.print(omessage.tomodule);
-    //  Serial.print(",");
-      Serial.print("01");
-      //Serial.print(",");
-      Serial.print(omessage.data);
-      Serial.print("#");
-      break;
-    case 1:
-      Serial1.print("!");
-      Serial1.print(omessage.tomodule);
-      Serial1.print(",");
-      Serial1.print("0");
-      Serial1.print(",");
-      Serial1.print(omessage.port);
-      Serial1.print(",");
-      Serial1.print(omessage.data);
-      Serial1.print("#");
-      break;
-      case 2:
-        Serial2.print("!");
-        Serial2.print(omessage.tomodule);
-        Serial2.print(",");
-        Serial2.print("0");
-        Serial2.print(",");
-        Serial2.print(omessage.port);
-        Serial2.print(",");
-        Serial2.print(omessage.data);
-        Serial2.print("#");
-        break;
-
-        case 3:
-          Serial3.print("!");
-          Serial3.print(omessage.tomodule);
-          Serial3.print(",");
-          Serial3.print("0");
-          Serial3.print(",");
-          Serial3.print(omessage.port);
-          Serial3.print(",");
-          Serial3.print(omessage.data);
-          Serial3.print("#");
-          break;
-
-
-  }
   omessage=emptymsg;
 }
 
@@ -325,7 +277,6 @@ bool initSD(){
 
 
 void ListFiles(){
-  initSD();
   File root = SD.open("/");
 root.rewindDirectory();
 String filenames="";
@@ -348,14 +299,14 @@ String filenames="";
 
 
 void SendDebug(String Aval) {
- // if (dbg == true) {
- //  Serial.print("!"+Aval+"#");
- // Serial.print("\n");
- //  //delay(10);
- // }
+ if (dbg == true) {
 genOmessageAndSendData("01,"+Aval,"00","00");
+  }
+}
 
+void SendInfo(String Aval) {
 
+genOmessageAndSendData("01,"+Aval,"00","00");
 
 }
 
@@ -461,71 +412,75 @@ void genMsg(int index,int index2,int commacount){
               case 2:
                   imessage.longpress[index2]= serbuf[index];
                   break;
+              case 3:
+                    imessage.filename[index2]= serbuf[index];
+                    break;
               }
   break;
     }
 }
 
-Rule populateRule(String rulestring){
+void populateRule(String rulestring){
+
   char rulebuf[62];
   int commacount=0;
   int idx=0;
   rulestring.toCharArray(rulebuf, 62);
   strcat(rulebuf, '\0');
-Rule rule=emptyrule;
+rule=emptyrule;
   for (int i =0; i< sizeof(rulebuf)-1;i++){
-      if (serbuf[i]=='\0'){break;};
-      if (serbuf[i]==';'){
+      if (rulebuf[i]=='\0'){break;};
+      if (rulebuf[i]==';'){
         commacount++;
         idx=0;
       } else {
         switch (commacount) {
           case 0:
-            rule.inbus[idx]= serbuf[i];
+            rule.inbus[idx]= rulebuf[i];
             break;
           case 1:
-            rule.inpmodule[idx]= serbuf[i];
+            rule.inpmodule[idx]= rulebuf[i];
             break;
           case 2:
-            rule.inport[idx]= serbuf[i];
+            rule.inport[idx]= rulebuf[i];
             break;
             case 3:
-              rule.inpstate[idx]= serbuf[i];
+              rule.inpstate[idx]= rulebuf[i];
               break;
               case 4:
-                rule.outpbus[idx]= serbuf[i];
+                rule.outpbus[idx]= rulebuf[i];
                 break;
 
               case 5:
-                rule.outpmmodule[idx]= serbuf[i];
+                rule.outpmmodule[idx]= rulebuf[i];
                 break;
 
               case 6:
-                rule.outpport[idx]= serbuf[i];
+                rule.outpport[idx]= rulebuf[i];
                 break;
 
               case 7:
-                rule.outpstate[idx]= serbuf[i];
+                rule.outpstate[idx]= rulebuf[i];
                 break;
 
               case 8:
-                rule.hrstart[idx]= serbuf[i];
+                rule.hrstart[idx]= rulebuf[i];
                 break;
 
               case 9:
-                rule.minstart[idx]= serbuf[i];
+                rule.minstart[idx]= rulebuf[i];
                 break;
 
               case 10:
-                rule.hrend[idx]= serbuf[i];
+                rule.hrend[idx]= rulebuf[i];
                 break;
 
               case 11:
-                rule.minend[idx]= serbuf[i];
+                rule.minend[idx]= rulebuf[i];
                 break;
 
               case 12:
-                rule.lpressec[idx]= serbuf[i];
+                rule.lpressec[idx]= rulebuf[i];
                 break;
         }
 
@@ -534,7 +489,7 @@ Rule rule=emptyrule;
         idx++;
       }
   }
-return rule;
+
 
 }
 
@@ -543,7 +498,7 @@ return rule;
 
 void genOmessageAndSendData(String data,String obus,String omod){
 omessage=emptymsg;
-data.toCharArray(omessage.data, 200);
+data.toCharArray(omessage.data, data.length()+1);
   if (obus.length() == 1) {
     omessage.tobus[0] = "0";
     omessage.tobus[1] = obus[0];
@@ -562,6 +517,48 @@ sendData();
 omessage=emptymsg;
 }
 
+void sendData(){
+
+  int pt = atoi(omessage.tobus);
+  switch (pt) {
+    case 0:
+      Serial.print("!");
+      Serial.print(omessage.tomodule);
+    //  Serial.print(",");
+      Serial.print("01");
+      //Serial.print(",");
+      Serial.print(omessage.data);
+      Serial.print("#");
+      break;
+    case 1:
+      Serial1.print("!");
+      Serial1.print(omessage.tomodule);
+      Serial1.print("01");
+      Serial1.print(omessage.data);
+      Serial1.print("#");
+      break;
+      case 2:
+        Serial2.print("!");
+        Serial2.print(omessage.tomodule);
+        Serial2.print("01");
+        Serial2.print(omessage.data);
+        Serial2.print("#");
+        break;
+
+        case 3:
+          Serial3.print("!");
+          Serial3.print(omessage.tomodule);
+          Serial3.print("01");
+          Serial3.print(omessage.data);
+          Serial3.print("#");
+          break;
+
+
+  }
+
+  omessage=emptymsg;
+}
+
 
 void pfile() {
 File RuleFile;
@@ -574,9 +571,53 @@ RuleFile = SD.open(imessage.filename);
 RuleFile.close();
 
 }
+void ExecuteRulesFromFile(){
+  File RuleFile;
+  RuleFile = SD.open(imessage.filename);
+      while (RuleFile.available()) {
+            String aString = RuleFile.readStringUntil('\n');
+            populateRule(aString);
+          //  SendDebug("imessage.filename="+String(imessage.filename));
+              if (String(imessage.filename) == "main.r"){
+              //  SendDebug("imessage.filename="+String(imessage.filename));
+
+                  if (atoi(rule.inbus) == atoi(imessage.inbus)) {
+                //    SendDebug("rule.inbus="+String(rule.inbus));
+              //      SendDebug("imessage.inbus="+String(imessage.inbus));
+
+                      if (atoi(rule.inport) == atoi(imessage.inport)) {
+                  //      SendDebug("rule.inport="+String(rule.inport));
+                  //      SendDebug("imessage.inport="+String(imessage.inport));
+                          if  (atoi(rule.inpstate) == atoi(imessage.data)) {
+                      //      SendDebug("rule.inpstate[0]="+String(rule.inpstate[0]));
+                      //      SendDebug("imessage.data[0]="+String(imessage.data[0]));
+                      //      SendDebug("imessage.longpress="+String(imessage.longpress));
+                      //      SendDebug("rule.lpressec="+String(rule.lpressec));
+                                    if ( atoi(imessage.longpress) <= (atoi(rule.lpressec) + 3)  and  atoi(imessage.longpress) >= atoi(rule.lpressec))  {
+                                          genOmessageAndSendData("21,"+String(rule.outpstate), String(rule.outpbus), String(rule.outpmmodule));
+                                        SendDebug("Sending RULE: 21 State:" + String(rule.outpstate)+" Bus:"+ String(rule.outpbus)+" Module:"+ String(rule.outpmmodule)) ;
+                                    }
+
+                          }
+                      }
+                  }
+            } else {
+                genOmessageAndSendData("21,"+String(rule.outpstate), String(rule.outpbus), String(rule.outpmmodule));
+
+
+            }
+      }
+
+
+  RuleFile.close();
+
+
+
+}
+
+
 
 void SendFiles() {
-  initSD();
   File root = SD.open("/");
 root.rewindDirectory();
 String filenames="";
@@ -668,13 +709,13 @@ for(int i = 0;i<pc;i++){
        int secs = now() - ports[i][3];
        ports[i][3]=0;
        // Processinpstring(0,"20,"+String(i+1)+",0,"+String(secs));
-       inpMsg="0000,20,"+String(i+1)+",0,"+String(secs);
+       inpMsg="0000,20,"+String(i+1)+",0,"+String(secs)+",main.r";
       }
       if(ports[i][1]==1){
            ports[i][2]=1;
            ports[i][3]=now();
            // Processinpstring(0,"20,"+String(i+1)+",1,0");
-           inpMsg="0000,20,"+String(i+1)+",1,0";
+           inpMsg="0000,20,"+String(i+1)+",1,0,main.r";
            SendDebug("mapbutton;0;0;"+String(i+1));
     }
     memset(serbuf,0, sizeof(serbuf));
