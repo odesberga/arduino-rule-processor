@@ -828,7 +828,7 @@ void ExecuteRulesFromFile(){
                           //      SendDebug("imessage.data[0]="+String(imessage.data[0]));
                           //      SendDebug("imessage.longpress="+String(imessage.longpress));
                           //      SendDebug("rule.lpressec="+String(rule.lpressec));
-                                        if ( atoi(imessage.longpress) <= (atoi(rule.lpressec) + 3)  and  atoi(imessage.longpress) >= atoi(rule.lpressec))  {
+                                        if ( (atoi(imessage.longpress) <= (atoi(rule.lpressec) + 3))  and  (atoi(imessage.longpress) >= atoi(rule.lpressec)) )  {
                                               genOmessageAndSendData("21,"+String(rule.outpport)+","+String(rule.outpstate), String(rule.outpbus), String(rule.outpmmodule));
                                             SendDebug("Sending RULE: 21 State:" + String(rule.outpstate)+" Bus:"+ String(rule.outpbus)+" Module:"+ String(rule.outpmmodule)) ;
                                         }
